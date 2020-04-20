@@ -8,7 +8,7 @@ spark = SparkSession \
     .config("spark.master", "local") \
     .getOrCreate()
 
-def label_review(votes):
+def category_review(votes):
     score = votes[0]/votes[1]
     if score >= 0.8:
         return "good"
@@ -17,18 +17,18 @@ def label_review(votes):
     else:
         return "soso"
 
-label_review_udf = udf(label_review, StringType())
+category_review_udf = udf(category_review, StringType())
 
 review_df = spark \
     .read.json("data/reviews_Musical_Instruments_5.json") \
     .where(col("helpful")[1] >= 5) \
-    .withColumn("label", label_review_udf("helpful")) \
-    .select("reviewText", "label") \
+    .withColumn("category", category_review_udf("helpful")) \
+    .select("reviewText", "category") \
     .cache()
 
-review_df_good = review_df.where(col("label") == "good").cache()
-review_df_bad = review_df.where(col("label") == "bad").cache()
-review_df_soso = review_df.where(col("label") == "soso").cache()
+review_df_good = review_df.where(col("category") == "good").cache()
+review_df_bad = review_df.where(col("category") == "bad").cache()
+review_df_soso = review_df.where(col("category") == "soso").cache()
 
 n_good = review_df_good.count()
 n_bad = review_df_bad.count()
@@ -49,4 +49,4 @@ review_preprocessed_df = spark \
     .read.parquet("output/reviews_Musical_Instruments_5_preprocessed.parquet")
 
 review_preprocessed_df.show()
-review_preprocessed_df.groupBy("label").count().show()
+review_preprocessed_df.groupBy("category").count().show()
