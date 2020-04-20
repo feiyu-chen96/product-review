@@ -14,32 +14,41 @@ spark = SparkSession \
 data_df = spark \
     .read.parquet("output/reviews_Musical_Instruments_5_preprocessed.parquet")
 
+# tokenize words
 tokenizer = \
     RegexTokenizer(inputCol="reviewText", outputCol="wordsRaw", pattern="\\W")
+data_df_tokenized = tokenizer.transform(data_df)
+
+# remove stop words
 remover = StopWordsRemover(inputCol="wordsRaw", outputCol="words")
+data_df_filtered = remover.transform(data_df_tokenized)
+
+# hashing term frequency 
 hashing_term_freq = \
     HashingTF(inputCol="words", outputCol="featuresRaw", numFeatures=5000)
+data_df_tf = hashing_term_freq.transform(data_df_filtered)
+
+# inverse document frequency
 inv_doc_freq = IDF(inputCol="featuresRaw", outputCol="features", minDocFreq=5)
-indexer = StringIndexer(inputCol = "category", outputCol = "label")
+inv_doc_freq_fitted = inv_doc_freq.fit(data_df_tf)
+data_df_tfidf = inv_doc_freq_fitted.transform(data_df_tf)
 
-pipeline = Pipeline(stages=[
-    tokenizer, 
-    remover,
-    hashing_term_freq,
-    inv_doc_freq, 
-    indexer]
-)
+# encode classes
+indexer = StringIndexer(inputCol="category", outputCol="label")
+indexer_fitted = indexer.fit(data_df_tfidf)
+data_prepared_df = indexer_fitted.transform(data_df_tfidf)
 
-pipeline_fitted = pipeline.fit(data_df)
-data_prepared_df = pipeline_fitted.transform(data_df)
-
+# train-test split
 train_df, test_df = data_prepared_df.randomSplit([0.8, 0.2], seed=42)
+
+# train
 log_reg = LogisticRegression(
     featuresCol="features", labelCol="label", predictionCol="prediction",
     maxIter=20, regParam=0.3, elasticNetParam=0
 )
 log_reg_fitted = log_reg.fit(train_df)
 
+# predict
 test_pred_df = log_reg_fitted.transform(test_df)
 test_pred_df.show()
 evaluator = MulticlassClassificationEvaluator(
