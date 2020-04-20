@@ -4,7 +4,7 @@ from pyspark.sql.functions import udf
 from pyspark.ml import Pipeline
 from pyspark.ml.feature import RegexTokenizer, StopWordsRemover, HashingTF, IDF 
 from pyspark.ml.feature import StringIndexer
-from pyspark.ml.classification import LogisticRegression
+from pyspark.ml.classification import LogisticRegressionModel
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 from nltk.stem.lancaster import LancasterStemmer
 
@@ -49,10 +49,6 @@ indexer = StringIndexer(inputCol="category", outputCol="label")
 indexer_fitted = indexer.fit(data_df_tfidf)
 data_prepared_df = indexer_fitted.transform(data_df_tfidf)
 
-# train
-log_reg = LogisticRegression(
-    featuresCol="features", labelCol="label", predictionCol="prediction",
-    maxIter=20, regParam=0.3, elasticNetParam=0
-)
-log_reg_fitted = log_reg.fit(data_prepared_df)
-log_reg_fitted.save("output/reviews_Musical_Instruments_5_model.model")
+# predict
+log_reg_fitted = LogisticRegressionModel.load("output/reviews_Musical_Instruments_5_model.model")
+test_pred_df = log_reg_fitted.transform(data_prepared_df)
