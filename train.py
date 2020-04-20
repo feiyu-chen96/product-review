@@ -1,9 +1,12 @@
 from pyspark.sql import SparkSession
+from pyspark.sql.types import ArrayType, StringType
+from pyspark.sql.functions import udf
 from pyspark.ml import Pipeline
 from pyspark.ml.feature import RegexTokenizer, StopWordsRemover, HashingTF, IDF 
 from pyspark.ml.feature import StringIndexer
 from pyspark.ml.classification import LogisticRegression
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
+from nltk.stem.lancaster import LancasterStemmer
 
 spark = SparkSession \
     .builder \
@@ -23,10 +26,18 @@ data_df_tokenized = tokenizer.transform(data_df)
 remover = StopWordsRemover(inputCol="wordsRaw", outputCol="words")
 data_df_filtered = remover.transform(data_df_tokenized)
 
+# stemming
+stemmer = LancasterStemmer()
+stemmer_udf = udf(
+    lambda tokens: [stemmer.stem(token) for token in tokens], 
+    ArrayType(StringType())
+)
+data_f_stemmed = data_df_filtered.withColumn("wordsStemmed", stemmer_udf("words"))
+
 # hashing term frequency 
 hashing_term_freq = \
-    HashingTF(inputCol="words", outputCol="featuresRaw", numFeatures=5000)
-data_df_tf = hashing_term_freq.transform(data_df_filtered)
+    HashingTF(inputCol="wordsStemmed", outputCol="featuresRaw", numFeatures=5000)
+data_df_tf = hashing_term_freq.transform(data_f_stemmed)
 
 # inverse document frequency
 inv_doc_freq = IDF(inputCol="featuresRaw", outputCol="features", minDocFreq=5)
