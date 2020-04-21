@@ -67,7 +67,7 @@ data_prepared_df = indexer_fitted.transform(data_df_tfidf)
 # train
 log_reg = LogisticRegression(
     featuresCol="features", labelCol="label", predictionCol="prediction",
-    maxIter=20, regParam=0.3, elasticNetParam=0
+    maxIter=100, regParam=0.3, elasticNetParam=0
 )
 log_reg_fitted = log_reg.fit(data_prepared_df)
 log_reg_fitted.save("output/reviews_model.model")
