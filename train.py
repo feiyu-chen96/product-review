@@ -1,12 +1,12 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.types import ArrayType, StringType
-from pyspark.sql.functions import udf
+# from pyspark.sql.types import ArrayType, StringType
+# from pyspark.sql.functions import udf
 from pyspark.ml import Pipeline
 from pyspark.ml.feature import RegexTokenizer, StopWordsRemover, HashingTF, IDF 
 from pyspark.ml.feature import StringIndexer
 from pyspark.ml.classification import LogisticRegression
-from pyspark.ml.evaluation import MulticlassClassificationEvaluator
-from nltk.stem.lancaster import LancasterStemmer
+# from pyspark.ml.evaluation import MulticlassClassificationEvaluator
+# from nltk.stem.lancaster import LancasterStemmer
 
 # local mode
 spark = SparkSession \
