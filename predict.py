@@ -8,14 +8,23 @@ from pyspark.ml.classification import LogisticRegressionModel
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 from nltk.stem.lancaster import LancasterStemmer
 
+# local mode
 spark = SparkSession \
     .builder \
     .appName("IsItHelpfull") \
-    .config("spark.master", "local") \
+    .master("local[*]") \
     .getOrCreate()
 
+# cluster mode
+# spark = SparkSession \
+#     .builder \
+#     .appName("IsItHelpfull") \
+#     .config("spark.executor.instances", 4) \
+#     .config("spark.executor.cores", 1) \
+#     .getOrCreate()
+
 data_df = spark \
-    .read.parquet("output/reviews_Musical_Instruments_5_preprocessed.parquet")
+    .read.parquet("output/reviews_preprocessed.parquet")
 
 # tokenize words
 tokenizer = \
@@ -26,18 +35,24 @@ data_df_tokenized = tokenizer.transform(data_df)
 remover = StopWordsRemover(inputCol="wordsRaw", outputCol="words")
 data_df_filtered = remover.transform(data_df_tokenized)
 
-# stemming
-stemmer = LancasterStemmer()
-stemmer_udf = udf(
-    lambda tokens: [stemmer.stem(token) for token in tokens], 
-    ArrayType(StringType())
-)
-data_f_stemmed = data_df_filtered.withColumn("wordsStemmed", stemmer_udf("words"))
+# skip stemming, haven't figured out how to bootstrap EMR with nltk installed
+# # stemming
+# stemmer = LancasterStemmer()
+# stemmer_udf = udf(
+#     lambda tokens: [stemmer.stem(token) for token in tokens], 
+#     ArrayType(StringType())
+# )
+# data_df_stemmed = data_df_filtered.withColumn("wordsStemmed", stemmer_udf("words"))
+
+# # hashing term frequency 
+# hashing_term_freq = \
+#     HashingTF(inputCol="wordsStemmed", outputCol="featuresRaw", numFeatures=5000)
+# data_df_tf = hashing_term_freq.transform(data_df_stemmed)
 
 # hashing term frequency 
 hashing_term_freq = \
-    HashingTF(inputCol="wordsStemmed", outputCol="featuresRaw", numFeatures=5000)
-data_df_tf = hashing_term_freq.transform(data_f_stemmed)
+    HashingTF(inputCol="words", outputCol="featuresRaw", numFeatures=5000)
+data_df_tf = hashing_term_freq.transform(data_df_filtered)
 
 # inverse document frequency
 inv_doc_freq = IDF(inputCol="featuresRaw", outputCol="features", minDocFreq=5)
@@ -50,5 +65,5 @@ indexer_fitted = indexer.fit(data_df_tfidf)
 data_prepared_df = indexer_fitted.transform(data_df_tfidf)
 
 # predict
-log_reg_fitted = LogisticRegressionModel.load("output/reviews_Musical_Instruments_5_model.model")
+log_reg_fitted = LogisticRegressionModel.load("output/reviews_model.model")
 test_pred_df = log_reg_fitted.transform(data_prepared_df)
