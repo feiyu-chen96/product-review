@@ -35,8 +35,9 @@ review_df_good = review_df.where(col("category") == "good").cache()
 review_df_else = review_df.where(col("category") == "else").cache()
 n_good = review_df_good.count()
 n_else = review_df_else.count()
+fraction = float(n_good)/n_else
 review_df_else_upsampled = \
-    review_df_else.sample(withReplacement=True, fraction=n_good/n_else)
+    review_df_else.sample(withReplacement=True, fraction=fraction)
 review_df_preprocessed = review_df_good.unionAll(review_df_else_upsampled)
 
 review_df_preprocessed.write.parquet(
